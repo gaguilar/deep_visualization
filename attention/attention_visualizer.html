@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<meta charset="UTF-8">
+<html>
+<head>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+    <style>
+        #sentences{
+            min-height: 700px;
+            max-height: 700px;
+            overflow: scroll;
+        }
+        .post {
+            border: solid 1px;
+            border-radius: 5px;
+            box-shadow: 2px 2px 5px #888888;
+            padding: 15px;
+            word-wrap: break-word;
+            margin-bottom: 40px;
+        }
+        .token{
+            display: inline-block;
+            text-align: center;
+            /*margin: 0 auto;*/
+        }
+        .word {
+            padding:5px  15px 5px 15px;
+        }
+        .pred{
+            font-style: italic;
+            font-size: small;
+        }
+        .tag{
+            font-size: small;
+        }
+        .control-panel{
+            margin-bottom: 50px;
+            max-width: 40%;
+            padding-top: 20px;
+        }
+        label {
+            margin-top: 1rem;
+        }
+        legend {
+            background-color: #000;
+            color: #fff;
+            padding: 3px 6px;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Attention Visualization Tool</h2>
+
+    <fieldset class="control-panel">
+        <legend>Control Panel</legend>
+        <label for="fileinput">JSON file:</label>
+        <input type="file" id="fileinput" value="Upload" onchange="handleFileSelect()"/>
+        <br/>
+        <br/>
+
+        <div>
+            <label for="colormap">Attention settings:</label>
+            <div>
+                <input type="radio" id="greyscale" value="greyscale" name="colormap" checked/>
+                <label for="greyscale">Grey scale</label>
+            </div>
+            <div>
+                <input type="radio" id="redalpha" value="redalpha" name="colormap"/>
+                <label for="redalpha">Red + alpha modifier</label>
+            </div>
+            <div>
+                <input type="radio" id="heatmap" value="heatmap" name="colormap"/>
+                <label for="heatmap">Heatmap</label>
+            </div>
+        </div>
+        <br/>
+        <div>
+            <label for="tags">Label information:</label>
+            <div>
+                <input type="radio" id="show-tag" value="show" name="tags" checked/>
+                <label for="show-tag">Show labels</label>
+            </div>
+            <div>
+                <input type="radio" id="hide-tag" value="hide" name="tags"/>
+                <label for="hide-tag">Hide labels</label>
+            </div>
+        </div>
+    </fieldset>
+
+    <div id="sentences"></div>
+</body>
+</html>
+
+<script type="application/javascript">
+    var handleFileSelect = function()
+    {
+        if (!window.File || !window.FileReader || !window.FileList || !window.Blob) {
+            alert('The File APIs are not fully supported in this browser.');
+            return;
+        }
+
+        input = document.getElementById('fileinput');
+        if (!input) {
+            alert("Um, couldn't find the fileinput element.");
+        }
+        else if (!input.files) {
+            alert("This browser doesn't seem to support the `files` property of file inputs.");
+        }
+        else if (!input.files[0]) {
+            alert("Please select a file before clicking 'Load'");
+        }
+        else {
+            file = input.files[0];
+            fr = new FileReader();
+            fr.onload = receivedText;
+            fr.readAsText(file);
+        }
+    };
+
+    var greyscale = function(prob)
+    {
+        var r = 0;
+        var g = 0;
+        var b = 0;
+
+        r = 255 * (1 - prob);
+        g = 255 * (1 - prob);
+        b = 255 * (1 - prob);
+
+        var color = "rgb(" + r + ", " + g + ", " + b + ")";
+        return color
+    };
+
+    var heatmap = function(prob)
+    {
+        var r = 0;
+        var g = 0;
+        var b = 0;
+
+        if(prob <= 0.5)
+        {
+            r = 255;                //at full strength
+            g = (prob / 0.5) * 255; //increase G gradually
+        }
+        else
+        {
+            r = 255 - ((prob - 0.5) / 0.5) * 255;   //decrease gradually
+            g = 255;                               //at full strength
+        }
+
+        r = parseInt(r);
+        g = parseInt(g);
+        b = parseInt(b);
+
+        var color = "rgb(" + r + ", " + g + ", " + b + ")";
+        // console.log(color);
+
+        return color;
+    };
+
+    var redAlpha = function(prob) {
+        return "rgba(250, 30, 30, " + prob + ")";
+    };
+
+    var receivedText = function()
+    {
+        $("#sentences").empty();
+
+        var json = JSON.parse(fr.result);
+        json.posts.forEach(function (post, post_id)
+        {
+            $('<div/>', {
+                id: post_id,
+                class: 'post'
+            }).appendTo('#sentences').html($.map(post, function(token){
+
+                // var color = redAlpha(token.attn);
+                // var color = heatmap(token.attn);
+                var color = greyscale(token.attn);
+
+                var wordDiv = $('<div/>', {class: 'word', text: token.word, attention: token.attn}).css({'background': color});
+                var tagDiv  = $('<div/>', {class: 'tag',  text: token.label});
+                var predDiv = $('<div/>', {class: 'pred', text: token.pred});
+
+                return $('<div/>', {class: 'token'})
+                            .append(wordDiv)
+                            .append(tagDiv)
+                            .append(predDiv);
+            }));
+        });
+    };
+
+    $('input:radio[name=tags]').change(function () {
+        if ($("input[name='tags']:checked").val() == 'hide') {
+            $('.tag').css({'display': 'none'});
+            $('.pred').css({'display': 'none'});
+        }
+        if ($("input[name='tags']:checked").val() == 'show') {
+            $('.tag').css({'display': ''});
+            $('.pred').css({'display': ''});
+        }
+    });
+
+    $('input:radio[name=colormap]').change(function () {
+        if ($("input[name='colormap']:checked").val() == 'redalpha') {
+            $.map($('.word'), function(word){
+                $(word).css({'background': redAlpha($(word).attr('attention'))});
+            });
+        }
+        else if ($("input[name='colormap']:checked").val() == 'heatmap') {
+            $.map($('.word'), function(word){
+                $(word).css({'background': heatmap($(word).attr('attention'))});
+            });
+        }
+        else if ($("input[name='colormap']:checked").val() == 'greyscale') {
+            $.map($('.word'), function(word){
+                $(word).css({'background': greyscale($(word).attr('attention'))});
+            });
+        }
+    });
+</script>
