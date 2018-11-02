@@ -6,8 +6,9 @@
     <style>
         #sentences{
             /*min-height: 700px;
-            */max-height: 700px;
-            overflow: scroll;
+            max-height: 700px;
+            overflow: scroll;*/
+            max-width: 800px;
             padding: 10px  1px 40px 1px;
         }
 
@@ -68,12 +69,12 @@
         <div>
             <label for="colormap">Attention settings:</label>
             <div>
-                <input type="radio" id="greyscale" value="greyscale" name="colormap" checked/>
+                <input type="radio" id="greyscale" value="greyscale" name="colormap"/>
                 <label for="greyscale">Grey scale</label>
             </div>
             <div>
-                <input type="radio" id="redalpha" value="redalpha" name="colormap"/>
-                <label for="redalpha">Red + alpha modifier</label>
+                <input type="radio" id="redalpha" value="redalpha" name="colormap" checked/>
+                <label for="redalpha">Blue + alpha modifier</label>
             </div>
             <div>
                 <input type="radio" id="heatmap" value="heatmap" name="colormap"/>
@@ -81,19 +82,10 @@
             </div>
         </div>
         <br/>
-        <div>
-            <label for="tags">Label information:</label>
-            <div>
-                <input type="radio" id="show-tag" value="show" name="tags" checked/>
-                <label for="show-tag">Show labels</label>
-            </div>
-            <div>
-                <input type="radio" id="hide-tag" value="hide" name="tags"/>
-                <label for="hide-tag">Hide labels</label>
-            </div>
-        </div>
+       
     </fieldset>
 
+    <div id="gt_tags"></div>
     <div id="sentences"></div>
 </body>
 </html>
@@ -127,6 +119,7 @@
 
     var greyscale = function(prob)
     {
+		prob = prob * 2
         var r = 0;
         var g = 0;
         var b = 0;
@@ -155,7 +148,9 @@
             r = 255 - ((prob - 0.5) / 0.5) * 255;   //decrease gradually
             g = 255;                               //at full strength
         }
-
+		
+		r = 255 - ((prob - 0.5) / 0.5) * 255;   //decrease gradually
+        g = 255;                               //at full strength
         r = parseInt(r);
         g = parseInt(g);
         b = parseInt(b);
@@ -167,7 +162,8 @@
     };
 
     var redAlpha = function(prob) {
-        return "rgba(250, 30, 30, " + prob + ")";
+        //return "rgba(250, 30, 30, " + prob*3 + ")";
+        return "rgba(0, 0, 255, " + prob*3 + ")";
     };
 
     var loadWeightsFromJSON = function(){
@@ -188,14 +184,15 @@
     var showDocAttention = function(){
         input = document.getElementById('id_dropdown')
         selected_imdb_id = input.options[input.selectedIndex].value;
-        console.log(selected_imdb_id)
+
         attention_data = json_data[selected_imdb_id]
 
-        console.log(attention_data.words_weights);
-
+        document.getElementById("gt_tags").innerHTML = "";
         document.getElementById("sentences").innerHTML = "";
 
-        console.log(attention_data.tags);
+        $('<div/>', {
+                class: 'gt_tags'
+            }).appendTo('#gt_tags').html('<b>Ground Truth Tags: </b>' + attention_data.tags);
 
         attention_data.words_weights.forEach(function (word_score_list, sentence_idx)
         {
@@ -206,7 +203,7 @@
 
                 // var color = redAlpha(token.attn);
                 // var color = heatmap(token.attn);
-                var color = greyscale(word_score[1]);
+                var color = redAlpha(word_score[1]);
 
                 var wordDiv = $('<span>', {class: 'word', text: word_score[0], attention: word_score[1]}).css({'background': color}); 
                 return $('<span/>', {class: 'word'})
