@@ -3,6 +3,8 @@
 <html>
 <head>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+
     <style>
         #sentences{
             /*min-height: 700px;
@@ -85,12 +87,16 @@
        
     </fieldset>
 
+    <div id="chart_div"></div>
     <div id="gt_tags"></div>
     <div id="sentences"></div>
 </body>
 </html>
 
 <script type="application/javascript">
+    google.charts.load('current', {packages: ['corechart', 'bar']});
+    google.charts.setOnLoadCallback(convert_attn_weights); 
+    
     var json_data = ""
     var handleFileSelect = function()
     {
@@ -163,7 +169,7 @@
 
     var redAlpha = function(prob) {
         //return "rgba(250, 30, 30, " + prob*3 + ")";
-        return "rgba(0, 0, 255, " + prob*3 + ")";
+        return "rgba(99, 166, 255, " + prob*3 + ")";
     };
 
     var loadWeightsFromJSON = function(){
@@ -187,6 +193,9 @@
 
         attention_data = json_data[selected_imdb_id]
 
+        // Sentence level attention
+        sentence_attn_data_for_plot = convert_attn_weights(attention_data.sentence_weights)
+
         document.getElementById("gt_tags").innerHTML = "";
         document.getElementById("sentences").innerHTML = "";
 
@@ -196,6 +205,11 @@
 
         attention_data.words_weights.forEach(function (word_score_list, sentence_idx)
         {
+            $('<div/>', {
+                id: sentence_idx,
+                class: 'token'
+            }).appendTo('#sentences').html("<b>" + parseInt(sentence_idx+1) + "</b>");
+
             $('<div/>', {
                 id: sentence_idx,
                 class: 'sentence'
@@ -214,33 +228,37 @@
         });
     };
 
-    var receivedText = function()
-    {
-        $("#sentences").empty();
+    var convert_attn_weights = function(arr){
+        var data = new google.visualization.DataTable();
+        data.addColumn('number', 'Sentence Number');
+        data.addColumn('number', 'Attention Weight');
 
-        var json = JSON.parse(fr.result);
-        json.posts.forEach(function (post, post_id)
-        {
-            $('<div/>', {
-                id: post_id,
-                class: 'post'
-            }).appendTo('#sentences').html($.map(post, function(token){
+        data.addRows(arr.length);
 
-                // var color = redAlpha(token.attn);
-                // var color = heatmap(token.attn);
-                var color = greyscale(token.attn);
+        for (i=0; i<arr.length; i++){
+            console.log(arr[i]); 
+            data.setCell(i, 0, i+1);
+            data.setCell(i, 1, arr[i]);
+        };
 
-                var wordDiv = $('<div/>', {class: 'word', text: token.word, attention: token.attn}).css({'background': color});
-                var tagDiv  = $('<div/>', {class: 'tag',  text: token.label});
-                var predDiv = $('<div/>', {class: 'pred', text: token.pred});
+      var options = {
+        title: 'Importance of Sentences based on Attention Weight',
+        hAxis: {
+          title: 'Sentence Weight',
+        },
+        vAxis: {
+          title: 'Attention Weight'
+        },
+        'width':1024,
+        'height':200
+      };
 
-                return $('<div/>', {class: 'token'})
-                            .append(wordDiv)
-                            .append(tagDiv)
-                            .append(predDiv);
-            }));
-        });
-    };
+      var chart = new google.visualization.ColumnChart(
+        document.getElementById('chart_div'));
+
+      chart.draw(data, options);
+
+    }
 
     $('input:radio[name=tags]').change(function () {
         if ($("input[name='tags']:checked").val() == 'hide') {
