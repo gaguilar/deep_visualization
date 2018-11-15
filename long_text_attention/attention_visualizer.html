@@ -87,9 +87,14 @@
        
     </fieldset>
 
-    <div id="chart_div"></div>
+    <div id="chart_div_plot"></div>
+    <div id="chart_div_rt"></div>
+    <div id="chart_div_rb"></div>
     <div id="gt_tags"></div>
+    <div id="predictions"></div>
     <div id="sentences"></div>
+    <div id="rt_sentences"></div>
+    <div id="rb_sentences"></div>
 </body>
 </html>
 
@@ -194,14 +199,21 @@
         attention_data = json_data[selected_imdb_id]
 
         // Sentence level attention
-        sentence_attn_data_for_plot = convert_attn_weights(attention_data.sentence_weights)
+        sentence_attn_data_for_plot = convert_attn_weights(attention_data.sentence_weights, 'chart_div_plot')
+        sentence_attn_data_for_rt = convert_attn_weights(attention_data.rt_sentence_weights, 'chart_div_rt')
+        sentence_attn_data_for_rb = convert_attn_weights(attention_data.rb_sentence_weights, 'chart_div_rb')
 
         document.getElementById("gt_tags").innerHTML = "";
+        document.getElementById("predictions").innerHTML = "";
         document.getElementById("sentences").innerHTML = "";
 
         $('<div/>', {
                 class: 'gt_tags'
             }).appendTo('#gt_tags').html('<b>Ground Truth Tags: </b>' + attention_data.tags);
+        $('<div/>', {
+                class: 'predicted_tags'
+            }).appendTo('#predictions').html('<b>Predictions: </b>' + attention_data.predictions);
+
 
         attention_data.words_weights.forEach(function (word_score_list, sentence_idx)
         {
@@ -226,9 +238,57 @@
                             // .append(predDiv);
             }));
         });
+
+        attention_data.rt_words_weights.forEach(function (word_score_list, sentence_idx)
+        {
+            $('<div/>', {
+                id: sentence_idx,
+                class: 'token'
+            }).appendTo('#rt_sentences').html("<b>" + parseInt(sentence_idx+1) + "</b>");
+
+            $('<div/>', {
+                id: sentence_idx,
+                class: 'rt_sentence'
+            }).appendTo('#rt_sentences').html($.map(word_score_list, function(word_score){
+
+                // var color = redAlpha(token.attn);
+                // var color = heatmap(token.attn);
+                var color = redAlpha(word_score[1]);
+
+                var wordDiv = $('<span>', {class: 'word', text: word_score[0], attention: word_score[1]}).css({'background': color}); 
+                return $('<span/>', {class: 'word'})
+                            .append(wordDiv);
+                            // .append(tagDiv)
+                            // .append(predDiv);
+            }));
+        });
+
+        attention_data.rb_words_weights.forEach(function (word_score_list, sentence_idx)
+        {
+            $('<div/>', {
+                id: sentence_idx,
+                class: 'token'
+            }).appendTo('#rb_sentences').html("<b>" + parseInt(sentence_idx+1) + "</b>");
+
+            $('<div/>', {
+                id: sentence_idx,
+                class: 'rb_sentence'
+            }).appendTo('#rb_sentences').html($.map(word_score_list, function(word_score){
+
+                // var color = redAlpha(token.attn);
+                // var color = heatmap(token.attn);
+                var color = redAlpha(word_score[1]);
+
+                var wordDiv = $('<span>', {class: 'word', text: word_score[0], attention: word_score[1]}).css({'background': color}); 
+                return $('<span/>', {class: 'word'})
+                            .append(wordDiv);
+                            // .append(tagDiv)
+                            // .append(predDiv);
+            }));
+        });
     };
 
-    var convert_attn_weights = function(arr){
+    var convert_attn_weights = function(arr, target_div){
         var data = new google.visualization.DataTable();
         data.addColumn('number', 'Sentence Number');
         data.addColumn('number', 'Attention Weight');
@@ -254,7 +314,7 @@
       };
 
       var chart = new google.visualization.ColumnChart(
-        document.getElementById('chart_div'));
+        document.getElementById(target_div));
 
       chart.draw(data, options);
 
