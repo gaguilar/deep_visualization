@@ -87,13 +87,13 @@
        
     </fieldset>
 
+    <div id="rank_score"></div>
+    <div id="gt_tags"></div>
+    <div id="predictions"></div>
     <div id="chart_div_plot"></div>
     <div id="chart_div_rt"></div>
     <div id="chart_div_rb"></div>
-    <div id="gt_tags"></div>
-    <div id="predictions"></div>
     <div id="sentences"></div>
-    <div id="rt_sentences"></div>
     <div id="rb_sentences"></div>
 </body>
 </html>
@@ -198,22 +198,27 @@
 
         attention_data = json_data[selected_imdb_id]
 
+        document.getElementById("sentences").innerHTML = "";
+        document.getElementById("rb_sentences").innerHTML = "";
         // Sentence level attention
         sentence_attn_data_for_plot = convert_attn_weights(attention_data.sentence_weights, 'chart_div_plot')
-        sentence_attn_data_for_rt = convert_attn_weights(attention_data.rt_sentence_weights, 'chart_div_rt')
         sentence_attn_data_for_rb = convert_attn_weights(attention_data.rb_sentence_weights, 'chart_div_rb')
 
+        document.getElementById("rank_score").innerHTML = "";
         document.getElementById("gt_tags").innerHTML = "";
         document.getElementById("predictions").innerHTML = "";
         document.getElementById("sentences").innerHTML = "";
 
+
+        $('<div/>', {
+                class: 'rank_score'
+            }).appendTo('#rank_score').html(selected_imdb_id + '  <b>Rank Score: </b>' + attention_data.rank_hit_score + '  <b>gate weights</b>:' + attention_data.gate_weights);
         $('<div/>', {
                 class: 'gt_tags'
             }).appendTo('#gt_tags').html('<b>Ground Truth Tags: </b>' + attention_data.tags);
         $('<div/>', {
                 class: 'predicted_tags'
-            }).appendTo('#predictions').html('<b>Predictions: </b>' + attention_data.predictions);
-
+            }).appendTo('#predictions').html('<b>Predictions: </b>' + attention_data.prediction);        
 
         attention_data.words_weights.forEach(function (word_score_list, sentence_idx)
         {
@@ -237,31 +242,7 @@
                             // .append(tagDiv)
                             // .append(predDiv);
             }));
-        });
-
-        attention_data.rt_words_weights.forEach(function (word_score_list, sentence_idx)
-        {
-            $('<div/>', {
-                id: sentence_idx,
-                class: 'token'
-            }).appendTo('#rt_sentences').html("<b>" + parseInt(sentence_idx+1) + "</b>");
-
-            $('<div/>', {
-                id: sentence_idx,
-                class: 'rt_sentence'
-            }).appendTo('#rt_sentences').html($.map(word_score_list, function(word_score){
-
-                // var color = redAlpha(token.attn);
-                // var color = heatmap(token.attn);
-                var color = redAlpha(word_score[1]);
-
-                var wordDiv = $('<span>', {class: 'word', text: word_score[0], attention: word_score[1]}).css({'background': color}); 
-                return $('<span/>', {class: 'word'})
-                            .append(wordDiv);
-                            // .append(tagDiv)
-                            // .append(predDiv);
-            }));
-        });
+        });        
 
         attention_data.rb_words_weights.forEach(function (word_score_list, sentence_idx)
         {
@@ -296,7 +277,7 @@
         data.addRows(arr.length);
 
         for (i=0; i<arr.length; i++){
-            console.log(arr[i]); 
+            //console.log(arr[i]); 
             data.setCell(i, 0, i+1);
             data.setCell(i, 1, arr[i]);
         };
